@@ -5,14 +5,18 @@ const bodyParser = require('body-parser')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const UserModel = require('./models/User')
+require('dotenv').config();
 
 const app = express()
 app.use(express.json())
 app.use(cors())
 
+const mongoUri = process.env.MONGODB_URI;
+
+mongoose.connect(mongoUri)
 // Create connection with MongoDB
 
-mongoose.connect("mongodb+srv://jacobbowler:E1Sl11nNikTC6mgy@reelrivals.jiax1.mongodb.net/users_db");
+mongoose.connect(mongoUri);
 
 app.post("/login", async (req, res) => {
     const {username, password} = req.body;
