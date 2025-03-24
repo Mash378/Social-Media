@@ -15,6 +15,6 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "app/signup.tsx",
-    "app/_login.tsx"  
+    "app/login.tsx"  
   ]
 }
