@@ -137,11 +137,11 @@ export default function SignupScreen() {
                     {/* Login Option */}
                     <View style={styles.loginContainer}>
                         <Text style={styles.loginText}>Already have an account? </Text>
-                        {/*<Link href="/login" asChild>
+                        <Link href="/login" asChild>
                             <TouchableOpacity>
                                 <Text style={styles.loginLink}>Log In</Text>
                             </TouchableOpacity>
-                        </Link> include path to login page */}
+                        </Link>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
