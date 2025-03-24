@@ -23,7 +23,7 @@ export default function Login() {
         setError('');
         
         if (!username || !password) {
-            setError('All fields are required');
+            setError('All fields are required.');
             return;
         }
 
@@ -34,9 +34,15 @@ export default function Login() {
             });
 
             router.replace('/home');
-        } catch (err) {
-            setError('Login failed. Please try again.');
-            console.log(err);
+        } catch (err: any) {
+            if (err.response)
+            {
+                setError('Login failed. Ensure the username and password you entered are correct and try again.');
+            }
+            else
+            {
+                setError('Network error. Please check your connection and try again.')
+            }
         }
     };
 
@@ -85,8 +91,12 @@ export default function Login() {
 
                         <View style={styles.signupContainer}>
                             <Text style={styles.signupText}>Don't have an account? </Text>
-                            <TouchableOpacity onPress={() => router.push('/signup')}>
+                            <TouchableOpacity onPress={() => {
+                                router.push('/signup')
+                                setError('')
+                                }}>
                                 <Text style={styles.signupLink}>Sign Up</Text>
+                                
                             </TouchableOpacity>
                         </View>
                     </View>

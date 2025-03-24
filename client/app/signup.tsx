@@ -48,20 +48,27 @@ export default function SignupScreen() {
             return;
         }
 
-        // to-do : connect to backend (displays sign up info on terminal for now)
-
         try {
             const response = await axios.post('http://localhost:3001/signup', {
-                username: username,
+                username,
                 email: email.toLowerCase(),
-                password: password,
+                password,
             });
-            
-            router.replace('/login'); // Navigate to home/feed page
-        } catch (err) {
-            setError('Error: User with that username or email already exists. Please try again or log in.')
-            console.log(err);
+        
+            router.replace('/login'); // Navigate to login after signup
+        } catch (err: any) {
+            if (err.response) {
+                if (err.response.status === 409) {
+                    setError('A user with this username or email already exists. Please try a different one or log in.');
+                } else {
+                    setError(`Error: ${err.response.data.message || 'An unexpected error occurred.'}`);
+                }
+            } else {
+                setError('Network error. Please check your connection and try again.');
+            }
+            console.error(err);
         }
+        
 
     };
 
