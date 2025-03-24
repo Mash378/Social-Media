@@ -6,24 +6,18 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import UserModel from "./models/User";
-
-/*
-
-    Status codes
-    201: New user created
-    400: No record existed or user already exists in database
-    401: Password is incorrect
-    500: Error logging in
-
-*/
+import session from "express-session";
+const store = new session.MemoryStore();
 
 dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
-app.use(cors());
-
-const router = express.Router()
+app.use(cors({
+  origin: 'http://localhost:8081',  // Allow requests from the frontend running on port 8081
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+}));
 
 const mongoUri: string | undefined = process.env.MONGODB_URI;
 if (!mongoUri) {
@@ -36,27 +30,40 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+app.use(
+    session({
+        secret: "some-secret",
+        cookie: { maxAge: 30000 },
+        saveUninitialized: false,
+        store: store,
+    })
+);
 
-router.post("/login", async (req: Request, res: Response) => {
-try {
-    const { username, password } = req.body;
-    const user = await UserModel.findOne({ username });
+app.get('/home', (req, res) => {
+    res.send("Hello!");
+})
 
-    if (!user) {
-        res.status(400).json({ error: "No record existed." });
-        return;
+app.post("/login", async (req: Request, res: Response) => {
+    try {
+
+        const { username, password } = req.body;
+        const user = await UserModel.findOne({ username });
+
+        if (!user) {
+            res.status(400).json({ error: "No record existed." });
+            return;
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            res.status(401).json({ error: "Password is incorrect." });
+            return;
+        }
+
+        res.json({ message: "Success!" });
+    } catch (err) {
+        res.status(500).json({ error: "Error logging in." });
     }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-        res.status(401).json({ error: "Password is incorrect." });
-        return;
-    }
-
-    res.json({ message: "Success!" });
-} catch (err) {
-    res.status(500).json({ error: "Error logging in." });
-}
 });  
 
 app.post("/signup", async (req: Request, res: Response) => {
@@ -80,7 +87,7 @@ try {
     res.status(500).json({ message: "Internal server error. Please try again later." });
 }
 });
-  
+
 app.listen(3001, () => {
-  console.log("Server is running");
+  console.log("Server is running on port 3001");
 });

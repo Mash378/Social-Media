@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
     StyleSheet,
@@ -29,17 +29,15 @@ export default function SignupScreen() {
             setError(prev => prev);
         };
 
-        return () => {
-        };
+        return () => {};
     }, []);
 
     const handleSubmit = async (e: { preventDefault: () => void; }) => {
-        e.preventDefault()
-        // reset any previous errors
+        e.preventDefault();
         setError('');
 
         if (!username || !email || !password || !confirmPassword) {
-            setError('All fields are required');
+            setError('All fields are required.');
             return;
         }
 
@@ -68,8 +66,12 @@ export default function SignupScreen() {
             }
             console.error(err);
         }
-        
+    };
 
+    const handleKeyPress = (e: any) => {
+        if (e.nativeEvent.key === 'Enter') {
+            handleSubmit(e);
+        }
     };
 
     return (
@@ -87,16 +89,11 @@ export default function SignupScreen() {
                 >
                     {/* Logo and Header */}
                     <View style={styles.headerContainer}>
-                        {/* <Image
-                            source={require('../assets/reelrivals-logo.png')}
-                            style={styles.logo}
-                            // insert logo
-                        /> */}
                         <Text style={styles.title}>ReelRivals</Text>
                         <Text style={styles.subtitle}>Share your competitive side!</Text>
                     </View>
 
-                    {/* signup Form */}
+                    {/* Signup Form */}
                     <View style={styles.formContainer}>
                         <TextInput
                             style={styles.input}
@@ -107,6 +104,8 @@ export default function SignupScreen() {
                             autoCapitalize="none"
                             autoComplete="username-new"
                             textContentType="username"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Move to the email input after "Enter"
                         />
                         <TextInput
                             style={styles.input}
@@ -118,6 +117,8 @@ export default function SignupScreen() {
                             autoCapitalize="none"
                             autoComplete="email"
                             textContentType="emailAddress"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Move to the password input after "Enter"
                         />
                         <TextInput
                             style={styles.input}
@@ -129,6 +130,8 @@ export default function SignupScreen() {
                             autoComplete="password-new"
                             textContentType="newPassword"
                             passwordRules="minlength: 8; required: lower; required: upper; required: digit; required: [-];"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Move to the confirm password input after "Enter"
                         />
                         <TextInput
                             style={styles.input}
@@ -139,34 +142,33 @@ export default function SignupScreen() {
                             secureTextEntry
                             autoComplete="password-new"
                             textContentType="newPassword"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="done" // Submit the form when "Enter" is pressed on confirm password
                         />
 
                         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                         <TouchableOpacity
                             style={styles.signupButton}
-                            onPress={handleSubmit} /* to-do : connect to backend*/
+                            onPress={handleSubmit} // Trigger handleSubmit when button is pressed
                         >
                             <Text style={styles.signupButtonText}>Sign Up</Text>
                         </TouchableOpacity>
-
-
                     </View>
-
 
                     {/* Login Option */}
                     <View style={styles.loginContainer}>
                         <Text style={styles.loginText}>Already have an account? </Text>
-                        {<Link href="/login" asChild>
+                        <Link href="/login" asChild>
                             <TouchableOpacity>
                                 <Text style={styles.loginLink}>Log In</Text>
                             </TouchableOpacity>
-                        </Link>}
+                        </Link>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
-            </>
+        </>
     );
 }
 
@@ -181,24 +183,19 @@ const styles = StyleSheet.create({
     },
     keyboardAvoid: {
         flex: 1,
-        backgroundColor: '#000'
+        backgroundColor: '#000',
     },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 20,
         paddingBottom: 30,
         justifyContent: 'center',
-        backgroundColor: '#000'
+        backgroundColor: '#000',
     },
     headerContainer: {
         alignItems: 'center',
         marginTop: 30,
         marginBottom: 40,
-    },
-    logo: {
-        width: 100,
-        height: 100,
-        marginBottom: 15,
     },
     title: {
         fontSize: 32,
@@ -221,7 +218,7 @@ const styles = StyleSheet.create({
         color: '#FFF',
     },
     errorText: {
-        color: '#00d4ff',
+        color: '#ff4d4d',
         marginBottom: 15,
         textAlign: 'center',
     },
@@ -236,20 +233,6 @@ const styles = StyleSheet.create({
         color: '#000000',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    separatorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 25,
-    },
-    separator: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#333',
-    },
-    separatorText: {
-        color: '#CCC',
-        paddingHorizontal: 10,
     },
     loginContainer: {
         flexDirection: 'row',

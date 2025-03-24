@@ -26,23 +26,35 @@ export default function Login() {
             setError('All fields are required.');
             return;
         }
-
+    
         try {
+            // Make POST request to /login
             const response = await axios.post('http://localhost:3001/login', {
                 username: username.toLowerCase(),
                 password: password
             });
 
+            axios.get('http://localhost:8081/home')
+            .then((response) => {
+                console.log('Successful GET response!');
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+
             router.replace('/home');
         } catch (err: any) {
-            if (err.response)
-            {
+            if (err.response) {
                 setError('Login failed. Ensure the username and password you entered are correct and try again.');
+            } else {
+                setError('Network error. Please check your connection and try again.');
             }
-            else
-            {
-                setError('Network error. Please check your connection and try again.')
-            }
+        }
+    };
+
+    const handleKeyPress = (e: any) => {
+        if (e.nativeEvent.key === 'Enter') {
+            handleSubmit();
         }
     };
 
@@ -66,6 +78,8 @@ export default function Login() {
                             autoCapitalize="none"  // Keeps the username in lowercase, if desired
                             autoComplete="username" // Provides suggestions for usernames, if available
                             textContentType="username" // Optimizes input for username entry
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Allows moving to the password input after "Enter"
                         />
 
 
@@ -78,6 +92,8 @@ export default function Login() {
                             secureTextEntry
                             autoComplete="password"
                             textContentType="password"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="done" // Set "done" for the password field
                         />
 
                         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -96,7 +112,6 @@ export default function Login() {
                                 setError('')
                                 }}>
                                 <Text style={styles.signupLink}>Sign Up</Text>
-                                
                             </TouchableOpacity>
                         </View>
                     </View>
