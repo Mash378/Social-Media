@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - main
+      - backend-Jacob
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
