@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import {
@@ -9,54 +9,85 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView
+    SafeAreaView,
+    ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [checkingSession, setCheckingSession] = useState(true);
+
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const response = await axios.get('http://localhost:3001/home', {
+                    withCredentials: true,
+                });
+
+                if (response.status === 200) {
+                    router.replace('/home');
+                }
+            } catch (err) {
+                // No active session — continue to login
+            } finally {
+                setCheckingSession(false);
+            }
+        };
+
+        checkSession();
+    }, []);
 
     const handleSubmit = async () => {
         setError('');
-        
+
         if (!username || !password) {
             setError('All fields are required.');
             return;
         }
-    
+
         try {
-            // Make POST request to /login
-            const response = await axios.post('http://localhost:3001/login', {
-                username: username.toLowerCase(),
-                password: password
-            });
+            const response = await axios.post(
+                'http://localhost:3001/login',
+                {
+                    username: username.toLowerCase(),
+                    password: password
+                },
+                {
+                    withCredentials: true,
+                }
+            );
 
-            axios.get('http://localhost:8081/home')
-            .then((response) => {
-                console.log('Successful GET response!');
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
+            if (response.status === 200) {
+                await AsyncStorage.setItem('username', username.toLowerCase());
+                router.replace('/home');
+            } else {
+                setError(`Login failed: ${response.data?.message || 'Unknown error'}`);
+                console.error('Server response:', response);
+            }
 
-            router.replace('/home');
         } catch (err: any) {
-            if (err.response) {
-                setError('Login failed. Ensure the username and password you entered are correct and try again.');
+            if (err.response && err.response.data) {
+                setError(`Login failed: ${err.response.data?.error || 'Invalid credentials'}`);
             } else {
                 setError('Network error. Please check your connection and try again.');
             }
         }
     };
 
-    const handleKeyPress = (e: any) => {
-        if (e.nativeEvent.key === 'Enter') {
-            handleSubmit();
-        }
-    };
+    if (checkingSession) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.container}>
+                    <ActivityIndicator size="large" color="#00d4ff" />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <>
@@ -68,20 +99,18 @@ export default function Login() {
                 >
                     <View style={styles.container}>
                         <Text style={styles.title}>ReelRivals Login</Text>
-                        
+
                         <TextInput
                             style={styles.input}
                             placeholder="Username"
                             placeholderTextColor="#888"
                             value={username}
                             onChangeText={setUsername}
-                            autoCapitalize="none"  // Keeps the username in lowercase, if desired
-                            autoComplete="username" // Provides suggestions for usernames, if available
-                            textContentType="username" // Optimizes input for username entry
-                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
-                            returnKeyType="next" // Allows moving to the password input after "Enter"
+                            autoCapitalize="none"
+                            autoComplete="username"
+                            textContentType="username"
+                            returnKeyType="next"
                         />
-
 
                         <TextInput
                             style={styles.input}
@@ -92,8 +121,8 @@ export default function Login() {
                             secureTextEntry
                             autoComplete="password"
                             textContentType="password"
-                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
-                            returnKeyType="done" // Set "done" for the password field
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
                         />
 
                         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -108,9 +137,9 @@ export default function Login() {
                         <View style={styles.signupContainer}>
                             <Text style={styles.signupText}>Don't have an account? </Text>
                             <TouchableOpacity onPress={() => {
-                                router.push('/signup')
-                                setError('')
-                                }}>
+                                router.push('/signup');
+                                setError('');
+                            }}>
                                 <Text style={styles.signupLink}>Sign Up</Text>
                             </TouchableOpacity>
                         </View>

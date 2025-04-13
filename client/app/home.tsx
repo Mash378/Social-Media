@@ -2,35 +2,53 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // For storing token or session info
+import axios from 'axios';
+
+axios.defaults.withCredentials = true; // Ensure cookies are sent
 
 export default function Home() {
     const router = useRouter();
     const [user, setUser] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Retrieve user session or token when component mounts
     useEffect(() => {
         const fetchUser = async () => {
+            setLoading(true);
             try {
-                const storedUsername = await AsyncStorage.getItem('username');
-                if (storedUsername) {
-                    setUser(storedUsername);
+                const res = await axios.get('http://localhost:3001/home'); // Replace with your machine’s IP
+                if (res.status === 200) {
+                    const username = res.data.replace("Hello, ", "").replace("!", "");
+                    setUser(username);
                 }
-            } catch (err) {
-                console.log('Error fetching user session:', err);
+            } catch (error) {
+                console.error("Not authenticated:", error);
+                router.replace('/login');
+            } finally {
+                setLoading(false);
             }
         };
         fetchUser();
     }, []);
 
     const handleLogout = async () => {
+        console.log('Hello!')
         try {
-            await AsyncStorage.removeItem('username'); // Remove user session
-            router.replace('/login'); // Redirect to login screen
-        } catch (err) {
-            console.log('Error logging out:', err);
+            await axios.post('http://localhost:3001/logout');
+            router.replace('/logout');
+        } catch (error) {
+            console.error('Logout error:', error);
         }
     };
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.container}>
+                    <Text style={styles.title}>Loading...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <>
@@ -70,7 +88,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     logoutButton: {
-        backgroundColor: '#ff4d4d', // Red color for logout
+        backgroundColor: '#ff4d4d',
         borderRadius: 8,
         padding: 15,
         alignItems: 'center',

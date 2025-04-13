@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.ts",
-    "start": "node dist/index.ts",
+    "start": "node index.ts",
     "build": "tsc"
   },
   "keywords": [],
@@ -15,6 +15,7 @@
   "dependencies": {
     "@types/connect-mongo": "^3.1.2",
     "@types/express-session": "^1.18.1",
+    "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "cars": "^1.1.6",
     "connect-mongo": "^5.1.0",
