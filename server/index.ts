@@ -173,20 +173,41 @@ app.post("/pairVideos", isAuthenticated, async (req: Request, res: Response): Pr
       return;
     }
 
-    // Randomly select two distinct videos for pairing
+    // Set the vote similarity margin (20% margin here)
+    const voteMargin = 0.2;
+    
+    // Randomly select the first video for pairing
     const video1 = videos[Math.floor(Math.random() * videos.length)] as IVideo;  // Type assertion
     let video2: IVideo;
 
-    do {
-      video2 = videos[Math.floor(Math.random() * videos.length)] as IVideo;  // Type assertion
-    } while (video1._id.equals(video2._id));  // _id is now properly typed as mongoose.Types.ObjectId
+    // Filter videos by vote similarity
+    const minVotes = video1.votes * (1 - voteMargin);
+    const maxVotes = video1.votes * (1 + voteMargin);
+
+    // Get the videos that are within the vote margin and are not the same as video1
+    const fairCandidates = videos.filter(video =>
+      video._id.toString() !== video1._id.toString() &&
+      video.votes >= minVotes &&
+      video.votes <= maxVotes
+    );
+
+    // If no fair candidates are found, return an error
+    if (fairCandidates.length === 0) {
+      res.status(404).json({ error: "No fair match found based on vote similarity." });
+      return;
+    }
+
+    // Randomly select a fair video for pairing
+    video2 = fairCandidates[Math.floor(Math.random() * fairCandidates.length)] as IVideo;  // Type assertion
 
     // Check if a battle with the same video pair already exists
     const existingBattle = await BattleModel.findOne({
       $or: [
-        { video1: video1._id, video2: video2._id, tag, active: true },
-        { video1: video2._id, video2: video1._id, tag, active: true },
+        { video1: video1._id, video2: video2._id },
+        { video1: video2._id, video2: video1._id }
       ],
+      tag,
+      active: true
     });
 
     if (existingBattle) {
