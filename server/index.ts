@@ -1,4 +1,4 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -7,6 +7,10 @@ import dotenv from "dotenv";
 import UserModel from "./models/User";
 import session, { SessionData } from "express-session";
 import { MongoClient } from "mongodb";
+import VideoModel, { IVideo } from "./models/Video";
+import BattleModel from "./models/Battle";
+import { Types } from 'mongoose'; // Import the Types module
+
 const store = new session.MemoryStore();
 
 dotenv.config();
@@ -60,9 +64,9 @@ app.use(
   })
 );
 
-const isAuthenticated = (req: Request, res: Response, next: () => void) => {
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.session && req.session.user) {
-    next();
+    next(); // Call next without arguments for success
   } else {
     res.status(401).json({ error: "Not authenticated" });
   }
@@ -148,12 +152,78 @@ app.post("/signup", async (req: Request, res: Response) => {
   }
 });
 
+app.post("/pairVideos", isAuthenticated, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { audioId, tag } = req.body;
+
+    if (!audioId || !tag) {
+      res.status(400).json({ error: "Audio ID and tag are required." });
+      return;
+    }
+
+    // Find videos that share the same audioId and have the same tag
+    const videos = await VideoModel.find({
+      audioId,
+      tags: tag,
+      status: "active", // Ensure only active videos are considered
+    }) as IVideo[];  // Assert the type of videos to be IVideo[]
+
+    if (videos.length < 2) {
+      res.status(404).json({ error: "Not enough videos for pairing." });
+      return;
+    }
+
+    // Randomly select two distinct videos for pairing
+    const video1 = videos[Math.floor(Math.random() * videos.length)] as IVideo;  // Type assertion
+    let video2: IVideo;
+
+    do {
+      video2 = videos[Math.floor(Math.random() * videos.length)] as IVideo;  // Type assertion
+    } while (video1._id.equals(video2._id));  // _id is now properly typed as mongoose.Types.ObjectId
+
+    // Check if a battle with the same video pair already exists
+    const existingBattle = await BattleModel.findOne({
+      $or: [
+        { video1: video1._id, video2: video2._id, tag, active: true },
+        { video1: video2._id, video2: video1._id, tag, active: true },
+      ],
+    });
+
+    if (existingBattle) {
+      res.status(400).json({ error: "This video pair is already in battle." });
+      return;
+    }
+
+    // Create the battle
+    const newBattle = new BattleModel({
+      video1: video1._id,
+      video2: video2._id,
+      tag,
+      startedAt: new Date(),
+      endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+    });
+
+    await newBattle.save();
+
+    // Return the battle details
+    res.status(201).json({
+      message: "Battle created successfully.",
+      battle: newBattle,
+    });
+  } catch (err) {
+    console.error("Error pairing videos:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+
 // POST route to handle logout action (from frontend)
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error("Error destroying session", err);
-      return res.status(500).send("Could not log out.");
+      res.status(500).send("Could not log out.");
+      return;
     }
 
     res.clearCookie('connect.sid');
