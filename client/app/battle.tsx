@@ -1,4 +1,3 @@
-// client/app/battle.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet,
