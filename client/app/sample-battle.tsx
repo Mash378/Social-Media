@@ -47,6 +47,13 @@ export default function SampleBattle() {
                 if (Math.abs(gestureState.dx) > width * 0.25) {
                     const newIndex = gestureState.dx > 0 ? 0 : 1;
 
+                    // Pause the current video immediately
+                    if (currentIndex === 0 && video1Ref.current) {
+                        video1Ref.current.pauseAsync();
+                    } else if (currentIndex === 1 && video2Ref.current) {
+                        video2Ref.current.pauseAsync();
+                    }
+
                     Animated.spring(position, {
                         toValue: gestureState.dx > 0 ? width : -width,
                         useNativeDriver: true,
@@ -66,6 +73,7 @@ export default function SampleBattle() {
             }
         })
     ).current;
+
 
     // Handle video playback based on current index
     useEffect(() => {
@@ -163,7 +171,9 @@ export default function SampleBattle() {
                                     style={styles.fullScreenVideo}
                                     resizeMode={ResizeMode.COVER}
                                     shouldPlay={currentIndex === 0}
+                                    isLooping={true}
                                     useNativeControls
+                                    progressUpdateIntervalMillis={50}
                                 />
                             </View>
 
@@ -174,14 +184,16 @@ export default function SampleBattle() {
                             ]}>
                                 <ExpoVideo
                                     ref={video2Ref}
-                                    source={{ uri: mockBattle.video2.url }}
+                                    source={{ uri: mockBattle.video1.url }}
                                     rate={1.0}
                                     volume={1.0}
                                     isMuted={false}
-                                    resizeMode={ResizeMode.COVER}
-                                    shouldPlay={currentIndex === 1}
-                                    useNativeControls
                                     style={styles.fullScreenVideo}
+                                    resizeMode={ResizeMode.COVER}
+                                    shouldPlay={currentIndex === 0}
+                                    isLooping={true}
+                                    useNativeControls
+                                    progressUpdateIntervalMillis={50}
                                 />
                             </View>
                         </View>
