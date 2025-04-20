@@ -132,11 +132,9 @@ export default function BattleScreen() {
         if (!battleId || !battle) return;
 
         try {
-            // We need to get userId from somewhere, either battle object or session
             const userId = battle?._id || '';
             await castVote(battleId.toString(), userId, votedFor, votedAgainst);
             setVoted(true);
-            // Maybe show some success animation
             setTimeout(() => {
                 router.push('/home');
             }, 1500);

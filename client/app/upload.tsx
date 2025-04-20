@@ -12,7 +12,7 @@ export default function UploadScreen() {
 
     const handleUploadComplete = (videoData: any) => {
         setUploadSuccess(true);
-        // Maybe show some success UI
+
     };
 
     return (
