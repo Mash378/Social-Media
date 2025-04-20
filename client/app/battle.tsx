@@ -1,8 +1,17 @@
 // client/app/battle.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, ActivityIndicator, SafeAreaView, Dimensions } from 'react-native';
+import {
+    StyleSheet,
+    View,
+    TouchableOpacity,
+    ActivityIndicator,
+    SafeAreaView,
+    Dimensions,
+    Animated,
+    PanResponder
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Video } from 'expo-av';
+import { Video, ResizeMode } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import axios from 'axios';
 import { ThemedText } from '@/components/ThemedText';
@@ -16,9 +25,17 @@ export default function BattleScreen() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [voted, setVoted] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
-    const video1Ref = useRef(null);
-    const video2Ref = useRef(null);
+    // Video refs for controlling playback
+    const video1Ref = useRef<Video>(null);
+    const video2Ref = useRef<Video>(null);
+
+    // Animation values
+    const position = useRef(new Animated.Value(0)).current;
+
+    // Calculate screen dimensions
+    const { width, height } = Dimensions.get('window');
 
     useEffect(() => {
         if (battleId) {
@@ -41,8 +58,79 @@ export default function BattleScreen() {
         }
     };
 
+    // Set up pan responder for swipe gestures
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onPanResponderMove: (_, gestureState) => {
+                position.setValue(gestureState.dx);
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                // If swipe distance is significant, change video
+                if (Math.abs(gestureState.dx) > width * 0.25) {
+                    const newIndex = gestureState.dx > 0 ? 0 : 1;
+
+                    Animated.spring(position, {
+                        toValue: gestureState.dx > 0 ? width : -width,
+                        useNativeDriver: true,
+                        tension: 40,
+                        friction: 8
+                    }).start(() => {
+                        position.setValue(0);
+                        setCurrentIndex(newIndex);
+                    });
+                } else {
+                    // Return to original position if swipe not significant
+                    Animated.spring(position, {
+                        toValue: 0,
+                        useNativeDriver: true
+                    }).start();
+                }
+            }
+        })
+    ).current;
+
+    // Handle video playback based on current index
+    useEffect(() => {
+        const playCurrentVideo = () => {
+            try {
+                if (currentIndex === 0) {
+                    if (video2Ref.current) {
+                        video2Ref.current.pauseAsync();
+                    }
+                    if (video1Ref.current) {
+                        video1Ref.current.playAsync();
+                    }
+                } else {
+                    if (video1Ref.current) {
+                        video1Ref.current.pauseAsync();
+                    }
+                    if (video2Ref.current) {
+                        video2Ref.current.playAsync();
+                    }
+                }
+            } catch (error) {
+                console.log('Error controlling video playback:', error);
+            }
+        };
+
+        if (battle) {
+            playCurrentVideo();
+        }
+
+        // Cleanup function to pause videos when component unmounts
+        return () => {
+            if (video1Ref.current) {
+                video1Ref.current.pauseAsync();
+            }
+            if (video2Ref.current) {
+                video2Ref.current.pauseAsync();
+            }
+        };
+    }, [currentIndex, battle]);
+
     const handleVote = async (votedFor: string, votedAgainst: string) => {
-        if (!battleId) return;
+        if (!battleId || !battle) return;
 
         try {
             // We need to get userId from somewhere, either battle object or session
@@ -95,75 +183,124 @@ export default function BattleScreen() {
         );
     }
 
+    // Get current video data
+    const currentVideo = currentIndex === 0 ? battle.video1 : battle.video2;
+    const otherVideo = currentIndex === 0 ? battle.video2 : battle.video1;
+
     return (
         <>
             <StatusBar style="light" backgroundColor="transparent" translucent={true} />
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.container}>
-                    <ThemedText style={styles.title}>Battle: #{battle.tag}</ThemedText>
-
-                    <View style={styles.videosContainer}>
-                        {/* First Video */}
-                        <View style={styles.videoWrapper}>
-                            <Video
-                                ref={video1Ref}
-                                source={{ uri: battle.video1.url }}
-                                rate={1.0}
-                                volume={1.0}
-                                isMuted={false}
-                                //resizeMode="contain"
-                                shouldPlay={false}
-                                useNativeControls
-                                style={styles.video}
-                            />
-                            <ThemedText style={styles.videoTitle}>{battle.video1.title}</ThemedText>
-
-                            {!voted && (
-                                <TouchableOpacity
-                                    style={styles.voteButton}
-                                    onPress={() => handleVote(battle.video1._id, battle.video2._id)}
-                                >
-                                    <ThemedText style={styles.voteButtonText}>Vote</ThemedText>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        {/* Second Video */}
-                        <View style={styles.videoWrapper}>
-                            <Video
-                                ref={video2Ref}
-                                source={{ uri: battle.video2.url }}
-                                rate={1.0}
-                                volume={1.0}
-                                isMuted={false}
-                                //resizeMode={"contain"}
-                                shouldPlay={false}
-                                useNativeControls
-                                style={styles.video}
-                            />
-                            <ThemedText style={styles.videoTitle}>{battle.video2.title}</ThemedText>
-
-                            {!voted && (
-                                <TouchableOpacity
-                                    style={styles.voteButton}
-                                    onPress={() => handleVote(battle.video2._id, battle.video1._id)}
-                                >
-                                    <ThemedText style={styles.voteButtonText}>Vote</ThemedText>
-                                </TouchableOpacity>
-                            )}
-                        </View>
+                    {/* Battle Title */}
+                    <View style={styles.headerContainer}>
+                        <ThemedText style={styles.title}>Battle: #{battle.tag}</ThemedText>
+                        <ThemedText style={styles.swipeHint}>
+                            Swipe to switch videos
+                        </ThemedText>
                     </View>
 
+                    {/* Videos Container */}
+                    <Animated.View
+                        style={[
+                            styles.fullScreenVideoContainer,
+                            {
+                                transform: [{ translateX: position }]
+                            }
+                        ]}
+                        {...panResponder.panHandlers}
+                    >
+                        {/* Video Player */}
+                        <View style={styles.videoPlayer}>
+                            {/* First Video - Hidden when not active */}
+                            <View style={[
+                                styles.videoWrapper,
+                                { display: currentIndex === 0 ? 'flex' : 'none' }
+                            ]}>
+                                <Video
+                                    ref={video1Ref}
+                                    source={{ uri: battle.video1.url }}
+                                    rate={1.0}
+                                    volume={1.0}
+                                    isMuted={false}
+                                    resizeMode={ResizeMode.COVER}
+                                    shouldPlay={currentIndex === 0}
+                                    useNativeControls
+                                    style={styles.fullScreenVideo}
+                                />
+                            </View>
+
+                            {/* Second Video - Hidden when not active */}
+                            <View style={[
+                                styles.videoWrapper,
+                                { display: currentIndex === 1 ? 'flex' : 'none' }
+                            ]}>
+                                <Video
+                                    ref={video2Ref}
+                                    source={{ uri: battle.video2.url }}
+                                    rate={1.0}
+                                    volume={1.0}
+                                    isMuted={false}
+                                    resizeMode={ResizeMode.COVER}
+                                    shouldPlay={currentIndex === 1}
+                                    useNativeControls
+                                    style={styles.fullScreenVideo}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Video Info Overlay */}
+                        <View style={styles.videoInfoOverlay}>
+                            <ThemedText style={styles.videoTitle}>{currentVideo.title}</ThemedText>
+
+                            {/* Vote Button for Current Video */}
+                            {!voted && (
+                                <TouchableOpacity
+                                    style={styles.voteButton}
+                                    onPress={() => handleVote(currentVideo._id, otherVideo._id)}
+                                >
+                                    <ThemedText style={styles.voteButtonText}>
+                                        Vote for {currentIndex === 0 ? 'Video 1' : 'Video 2'}
+                                    </ThemedText>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </Animated.View>
+
+                    {/* Thank You Screen */}
                     {voted && (
                         <View style={styles.votedContainer}>
                             <ThemedText style={styles.votedText}>Thanks for your vote!</ThemedText>
-                            <TouchableOpacity style={styles.nextButton} onPress={() => router.push('/home')}>
+                            <TouchableOpacity
+                                style={styles.nextButton}
+                                onPress={() => router.push('/home')}
+                            >
                                 <ThemedText style={styles.nextButtonText}>Next Battle</ThemedText>
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.push('/home')}>
+                    {/* Video Indicator */}
+                    <View style={styles.indicatorContainer}>
+                        <View
+                            style={[
+                                styles.indicator,
+                                currentIndex === 0 ? styles.activeIndicator : {}
+                            ]}
+                        />
+                        <View
+                            style={[
+                                styles.indicator,
+                                currentIndex === 1 ? styles.activeIndicator : {}
+                            ]}
+                        />
+                    </View>
+
+                    {/* Back Button */}
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => router.push('/home')}
+                    >
                         <ThemedText style={styles.backButtonText}>Back to Home</ThemedText>
                     </TouchableOpacity>
                 </View>
@@ -172,8 +309,7 @@ export default function BattleScreen() {
     );
 }
 
-const { width } = Dimensions.get('window');
-const videoWidth = width / 2 - 30; // Half screen minus padding
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     safeArea: {
@@ -182,59 +318,103 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        padding: 20,
+    },
+    headerContainer: {
+        position: 'absolute',
+        top: 40,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        alignItems: 'center',
+        paddingHorizontal: 20,
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
         textAlign: 'center',
-        marginBottom: 20,
+        color: '#FFF',
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10
     },
-    videosContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 20,
+    swipeHint: {
+        fontSize: 14,
+        color: '#FFF',
+        opacity: 0.8,
+        marginTop: 5,
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10
+    },
+    fullScreenVideoContainer: {
+        flex: 1,
+        width: width,
+        height: height,
+    },
+    videoPlayer: {
+        width: width,
+        height: height,
+        backgroundColor: '#000',
     },
     videoWrapper: {
-        width: videoWidth,
-        alignItems: 'center',
+        width: '100%',
+        height: '100%',
     },
-    video: {
-        width: videoWidth,
-        height: videoWidth * 1.5,
-        borderRadius: 8,
-        backgroundColor: '#1F1F1F',
+    fullScreenVideo: {
+        width: '100%',
+        height: '100%',
+    },
+    videoInfoOverlay: {
+        position: 'absolute',
+        bottom: 100,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        paddingHorizontal: 20,
     },
     videoTitle: {
-        marginTop: 10,
-        marginBottom: 10,
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#FFF',
+        marginBottom: 20,
         textAlign: 'center',
-        fontSize: 16,
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10
     },
     voteButton: {
         backgroundColor: '#00d4ff',
-        paddingVertical: 12,
-        paddingHorizontal: 30,
-        borderRadius: 8,
+        paddingVertical: 15,
+        paddingHorizontal: 40,
+        borderRadius: 30,
         alignItems: 'center',
     },
     voteButtonText: {
         color: '#000',
         fontWeight: 'bold',
+        fontSize: 16,
     },
     votedContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        zIndex: 20,
     },
     votedText: {
-        fontSize: 18,
-        marginBottom: 10,
+        fontSize: 24,
+        marginBottom: 20,
+        color: '#FFF'
     },
     nextButton: {
         backgroundColor: '#00d4ff',
         paddingVertical: 15,
         paddingHorizontal: 40,
-        borderRadius: 8,
+        borderRadius: 30,
         alignItems: 'center',
     },
     nextButtonText: {
@@ -242,13 +422,39 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
     },
+    indicatorContainer: {
+        position: 'absolute',
+        bottom: 40,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        zIndex: 10,
+    },
+    indicator: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        marginHorizontal: 5,
+    },
+    activeIndicator: {
+        backgroundColor: '#00d4ff',
+        width: 12,
+        height: 12,
+    },
     backButton: {
-        marginTop: 20,
-        alignItems: 'center',
+        position: 'absolute',
+        bottom: 20,
+        alignSelf: 'center',
+        zIndex: 10,
     },
     backButtonText: {
-        color: '#888',
+        color: 'rgba(255, 255, 255, 0.7)',
         fontSize: 16,
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10
     },
     errorText: {
         color: '#ff4d4d',
