@@ -11,12 +11,12 @@ const mockBattle = {
     video1: {
         _id: 'video1',
         title: 'Sample Video 1',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        url: 'https://drive.google.com/uc?export=download&id=1e4yQVIY7Y_GATDutrbt91fG7WHb7Nefm',
     },
     video2: {
         _id: 'video2',
         title: 'Sample Video 2',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        url: 'https://drive.google.com/uc?export=download&id=1e4yQVIY7Y_GATDutrbt91fG7WHb7Nefm',
     }
 };
 
@@ -88,7 +88,7 @@ export default function SampleBattle() {
                         } else if (currentIndex === 1 && video2Ref.current) {
                             video2Ref.current.playAsync();
                         }
-                    }, 50);
+                    }, 30);
                 } catch (error) {
                     console.log('Error controlling video playback:', error);
                 }
