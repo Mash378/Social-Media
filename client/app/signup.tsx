@@ -1,4 +1,5 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import {
     StyleSheet,
     View,
@@ -28,17 +29,15 @@ export default function SignupScreen() {
             setError(prev => prev);
         };
 
-        return () => {
-        };
+        return () => {};
     }, []);
 
-    const handleSignup = () => {
-        // reset any previous errors
+    const handleSubmit = async (e: { preventDefault: () => void; }) => {
+        e.preventDefault();
         setError('');
 
-
         if (!username || !email || !password || !confirmPassword) {
-            setError('All fields are required');
+            setError('All fields are required.');
             return;
         }
 
@@ -47,11 +46,32 @@ export default function SignupScreen() {
             return;
         }
 
-        // to-do : connect to backend (displays sign up info on terminal for now)
-        console.log('Signup data:', { username, email, password });
+        try {
+            const response = await axios.post('http://localhost:3001/signup', {
+                username,
+                email: email.toLowerCase(),
+                password,
+            });
+        
+            router.replace('/login'); // Navigate to login after signup
+        } catch (err: any) {
+            if (err.response) {
+                if (err.response.status === 409) {
+                    setError('A user with this username or email already exists. Please try a different one or log in.');
+                } else {
+                    setError(`Error: ${err.response.data.message || 'An unexpected error occurred.'}`);
+                }
+            } else {
+                setError('Network error. Please check your connection and try again.');
+            }
+            console.error(err);
+        }
+    };
 
-        // navigate to feed/videos
-        //router.replace('/feed');
+    const handleKeyPress = (e: any) => {
+        if (e.nativeEvent.key === 'Enter') {
+            handleSubmit(e);
+        }
     };
 
     return (
@@ -69,16 +89,11 @@ export default function SignupScreen() {
                 >
                     {/* Logo and Header */}
                     <View style={styles.headerContainer}>
-                        {/* <Image
-                            source={require('../assets/reelrivals-logo.png')}
-                            style={styles.logo}
-                            // insert logo
-                        /> */}
                         <Text style={styles.title}>ReelRivals</Text>
                         <Text style={styles.subtitle}>Share your competitive side!</Text>
                     </View>
 
-                    {/* signup Form */}
+                    {/* Signup Form */}
                     <View style={styles.formContainer}>
                         <TextInput
                             style={styles.input}
@@ -89,6 +104,8 @@ export default function SignupScreen() {
                             autoCapitalize="none"
                             autoComplete="username-new"
                             textContentType="username"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Move to the email input after "Enter"
                         />
                         <TextInput
                             style={styles.input}
@@ -100,6 +117,8 @@ export default function SignupScreen() {
                             autoCapitalize="none"
                             autoComplete="email"
                             textContentType="emailAddress"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Move to the password input after "Enter"
                         />
                         <TextInput
                             style={styles.input}
@@ -111,6 +130,8 @@ export default function SignupScreen() {
                             autoComplete="password-new"
                             textContentType="newPassword"
                             passwordRules="minlength: 8; required: lower; required: upper; required: digit; required: [-];"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="next" // Move to the confirm password input after "Enter"
                         />
                         <TextInput
                             style={styles.input}
@@ -121,18 +142,19 @@ export default function SignupScreen() {
                             secureTextEntry
                             autoComplete="password-new"
                             textContentType="newPassword"
+                            onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
+                            returnKeyType="done" // Submit the form when "Enter" is pressed on confirm password
                         />
 
                         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                         <TouchableOpacity
                             style={styles.signupButton}
-                            onPress={handleSignup} /* to-do : connect to backend*/
+                            onPress={handleSubmit} // Trigger handleSubmit when button is pressed
                         >
                             <Text style={styles.signupButtonText}>Sign Up</Text>
                         </TouchableOpacity>
                     </View>
-
 
                     {/* Login Option */}
                     <View style={styles.loginContainer}>
@@ -146,7 +168,7 @@ export default function SignupScreen() {
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
-            </>
+        </>
     );
 }
 
@@ -161,24 +183,19 @@ const styles = StyleSheet.create({
     },
     keyboardAvoid: {
         flex: 1,
-        backgroundColor: '#000'
+        backgroundColor: '#000',
     },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 20,
         paddingBottom: 30,
         justifyContent: 'center',
-        backgroundColor: '#000'
+        backgroundColor: '#000',
     },
     headerContainer: {
         alignItems: 'center',
         marginTop: 30,
         marginBottom: 40,
-    },
-    logo: {
-        width: 100,
-        height: 100,
-        marginBottom: 15,
     },
     title: {
         fontSize: 32,
@@ -201,7 +218,7 @@ const styles = StyleSheet.create({
         color: '#FFF',
     },
     errorText: {
-        color: '#00d4ff',
+        color: '#ff4d4d',
         marginBottom: 15,
         textAlign: 'center',
     },
@@ -216,20 +233,6 @@ const styles = StyleSheet.create({
         color: '#000000',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    separatorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 25,
-    },
-    separator: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#333',
-    },
-    separatorText: {
-        color: '#CCC',
-        paddingHorizontal: 10,
     },
     loginContainer: {
         flexDirection: 'row',
