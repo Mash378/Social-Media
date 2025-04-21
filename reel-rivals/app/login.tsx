@@ -37,6 +37,7 @@ export default function Login() {
                 password: password
             });
 
+<<<<<<< Updated upstream:reel-rivals/app/login.tsx
             axios.get('http://localhost:8081/home')
             .then((response) => {
                 console.log('Successful GET response!');
@@ -44,6 +45,15 @@ export default function Login() {
             .catch((error) => {
                 console.error('Error:', error);
             });
+=======
+            if (response.status === 200) {
+                await AsyncStorage.setItem('username', username.toLowerCase());
+                router.replace('/tab/home');
+            } else {
+                setError(`Login failed: ${response.data?.message || 'Unknown error'}`);
+                console.error('Server response:', response);
+            }
+>>>>>>> Stashed changes:client/app/login.tsx
 
             router.replace('/home');
         } catch (err: any) {
