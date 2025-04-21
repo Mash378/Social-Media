@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import { Feather, Ionicons } from '@expo/vector-icons'
 import {
     StyleSheet,
     View,
@@ -10,60 +9,85 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView
+    SafeAreaView,
+    ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login() {
     const router = useRouter();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [checkingSession, setCheckingSession] = useState(true);
 
-    const [secureTextEntry, SecureState]= useState(true);
-    
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const response = await axios.get('http://localhost:3001/home', {
+                    withCredentials: true,
+                });
+
+                if (response.status === 200) {
+                    router.replace('/home');
+                }
+            } catch (err) {
+                // No active session — continue to login
+            } finally {
+                setCheckingSession(false);
+            }
+        };
+
+        checkSession();
+    }, []);
+
     const handleSubmit = async () => {
         setError('');
-        
-        if (!email || !password) {
+
+        if (!username || !password) {
             setError('All fields are required.');
             return;
         }
-    
-        try {
-            // Make POST request to /login
-            const response = await axios.post('http://localhost:3001/login', {
-                email: email.toLowerCase(),
-                password: password
-            });
 
-<<<<<<< Updated upstream:reel-rivals/app/login.tsx
-            axios.get('http://localhost:8081/home')
-            .then((response) => {
-                console.log('Successful GET response!');
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-=======
+        try {
+            const response = await axios.post(
+                'http://localhost:3001/login',
+                {
+                    username: username.toLowerCase(),
+                    password: password
+                },
+                {
+                    withCredentials: true,
+                }
+            );
+
             if (response.status === 200) {
                 await AsyncStorage.setItem('username', username.toLowerCase());
-                router.replace('/tab/home');
+                router.replace('/home');
             } else {
                 setError(`Login failed: ${response.data?.message || 'Unknown error'}`);
                 console.error('Server response:', response);
             }
->>>>>>> Stashed changes:client/app/login.tsx
 
-            router.replace('/home');
         } catch (err: any) {
-            if (err.response) {
-                setError('Login failed. Ensure the username and password you entered are correct and try again.');
+            if (err.response && err.response.data) {
+                setError(`Login failed: ${err.response.data?.error || 'Invalid credentials'}`);
             } else {
                 setError('Network error. Please check your connection and try again.');
             }
         }
     };
+
+    if (checkingSession) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.container}>
+                    <ActivityIndicator size="large" color="#00d4ff" />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <>
@@ -75,37 +99,31 @@ export default function Login() {
                 >
                     <View style={styles.container}>
                         <Text style={styles.title}>ReelRivals Login</Text>
-                        
-                        <View style={styles.InputField}>
-                            <Ionicons name={"mail-outline"} size={30} color="#FFF"/>
-                            <TextInput
-                                style={styles.input} 
-                                placeholder='Email'
-                                placeholderTextColor="#888" 
-                                value={email} 
-                                keyboardType='email-address'
-                                onChangeText={setEmail} 
-                                onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
-                                returnKeyType="next" // Allows moving to the password input after "Enter"
-                            />
-                        </View>
-                        <View style={styles.InputField}>
-                            <Feather name={"lock"} size={30} color="#FFF"/>
-                            <TextInput 
-                                style={styles.input} 
-                                placeholder='Password'
-                                placeholderTextColor="#888" 
-                                value={password} 
-                                onChangeText={setPassword} 
-                                secureTextEntry={secureTextEntry} 
-                                onSubmitEditing={handleSubmit} // Trigger handleSubmit when "Enter" is pressed
-                                returnKeyType="done" // Set "done" for the password field
-                            />
-                            <TouchableOpacity onPress={() => SecureState((prev) => !prev)}>
-                            <Feather name={secureTextEntry ? "eye-off" : "eye"} size={20} color="#FFF"/>
-                            </TouchableOpacity>
-                        </View>
 
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Username"
+                            placeholderTextColor="#888"
+                            value={username}
+                            onChangeText={setUsername}
+                            autoCapitalize="none"
+                            autoComplete="username"
+                            textContentType="username"
+                            returnKeyType="next"
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            placeholderTextColor="#888"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            autoComplete="password"
+                            textContentType="password"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
+                        />
 
                         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -119,9 +137,9 @@ export default function Login() {
                         <View style={styles.signupContainer}>
                             <Text style={styles.signupText}>Don't have an account? </Text>
                             <TouchableOpacity onPress={() => {
-                                router.push('/signup')
-                                setError('')
-                                }}>
+                                router.push('/signup');
+                                setError('');
+                            }}>
                                 <Text style={styles.signupLink}>Sign Up</Text>
                             </TouchableOpacity>
                         </View>
@@ -149,16 +167,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#FFF',
         marginBottom: 20,
-    },
-    InputField: {
-        flexDirection: "row",
-        alignItems: "center",
-        width: '100%',
-        backgroundColor: '#1F1F1F',
-        borderRadius: 8,
-        padding: 15,
-        marginBottom: 15,
-        color: '#FFF',        
     },
     input: {
         width: '100%',
