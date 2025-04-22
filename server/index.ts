@@ -34,10 +34,6 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-
-const usersDb = mongoose.connection.useDb('users_db');
-const UserDbModel = usersDb.model("User", UserModel.schema);
-
 // Extend the session interface to include the 'user' property
 declare module 'express-session' {
   interface SessionData {
@@ -83,7 +79,7 @@ app.get('/home', isAuthenticated, (req, res) => {
 app.post("/login", async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
-    const user = await UserDbModel.findOne({ username });
+    const user = await UserModel.findOne({ username });
 
     if (!user) {
       res.status(400).json({ error: "No record existed. Please check the username you entered and try again." });
@@ -118,7 +114,7 @@ app.post("/signup", async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
 
-    const existingUser = await UserDbModel.findOne({
+    const existingUser = await UserModel.findOne({
       $or: [{ username }, { email }],
     });
 
@@ -130,7 +126,7 @@ app.post("/signup", async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await UserDbModel.create({
+    const newUser = await UserModel.create({
       username,
       email,
       password: hashedPassword,
