@@ -13,7 +13,6 @@ interface IBattle extends Document {
   concludedAt?: Date;
 }
 
-// Battle.ts
 const BattleSchema: Schema<IBattle> = new Schema({
   video1: { type: Schema.Types.ObjectId, ref: "Video", required: true },
   video2: { type: Schema.Types.ObjectId, ref: "Video", required: true },
@@ -33,8 +32,11 @@ const BattleSchema: Schema<IBattle> = new Schema({
   concludedAt: { type: Date },
 });
 
-// Ensure combination of video1, video2, and tag is unique for active battles
-BattleSchema.index({ video1: 1, video2: 1, tag: 1, active: 1 }, { unique: true });
+// TODO?: Ensure a combination of videos is unique per battle to avoid duplicate concurrent battles
+// BattleSchema.index({ video1: 1, video2: 1, tag: 1, active: 1 }, { unique: true });
 
-const BattleModel: Model<IBattle> = mongoose.model<IBattle>("Battle", BattleSchema);
+const BattleModel: Model<IBattle> = mongoose.model<IBattle>(
+  "Battle",
+  BattleSchema
+);
 export default BattleModel;

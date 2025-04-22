@@ -1,28 +1,26 @@
-import express, { Express, Request, Response, NextFunction } from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
+import cors from "cors";
 import dotenv from "dotenv";
+import express, { Express, Request, Response } from "express";
+import session from "express-session";
+import mongoose from "mongoose";
 import UserModel from "./models/User";
 import session, { SessionData } from "express-session";
 import { MongoClient } from "mongodb";
-import VideoModel, { IVideo } from "./models/Video";
-import BattleModel from "./models/Battle";
-import { Types } from 'mongoose'; // Import the Types module
-
 const store = new session.MemoryStore();
 
 dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
-app.use(cors({
-  origin: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: true,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true,
+  })
+);
 
 const mongoUri: string | undefined = process.env.MONGODB_URI;
 if (!mongoUri) {
@@ -35,15 +33,17 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Extend the session interface to include the 'user' property
-declare module 'express-session' {
+declare module "express-session" {
   interface SessionData {
     user?: {
+      id: string;
       username: string;
       email: string;
     };
   }
   interface Session {
     user?: {
+      id: string;
       username: string;
       email: string;
     };
@@ -64,7 +64,7 @@ app.use(
   })
 );
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+const isAuthenticated = (req: Request, res: Response, next: () => void) => {
   if (req.session && req.session.user) {
     next(); // Call next without arguments for success
   } else {
@@ -72,7 +72,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-app.get('/home', isAuthenticated, (req, res) => {
+app.get("/home", isAuthenticated, (req, res) => {
   res.send("Hello, " + req.session?.user?.username + "!");
 });
 
@@ -93,6 +93,7 @@ app.post("/login", async (req: Request, res: Response) => {
     }
 
     req.session.user = {
+      id: user.id.toString(),
       username: user.username,
       email: user.email,
     };
@@ -101,7 +102,10 @@ app.post("/login", async (req: Request, res: Response) => {
         console.error("Error saving session:", err);
         res.status(500).json({ error: "Failed to save session." });
       } else {
-        res.json({ message: "Success!", user: { username: user.username, email: user.email } });
+        res.json({
+          message: "Success!",
+          user: { username: user.username, email: user.email },
+        });
       }
     });
   } catch (err) {
@@ -133,6 +137,7 @@ app.post("/signup", async (req: Request, res: Response) => {
     });
 
     req.session.user = {
+      id: newUser.id.toString(),
       username: newUser.username,
       email: newUser.email,
     };
@@ -141,7 +146,10 @@ app.post("/signup", async (req: Request, res: Response) => {
         console.error("Error saving session:", err);
         res.status(500).json({ error: "Failed to save session" });
       } else {
-        res.status(201).json({ message: "User created successfully", user: { username: newUser.username, email: newUser.email } });
+        res.status(201).json({
+          message: "User created successfully",
+          user: { username: newUser.username, email: newUser.email },
+        });
       }
     });
   } catch (err) {
@@ -238,7 +246,7 @@ app.post("/pairVideos", isAuthenticated, async (req: Request, res: Response): Pr
 
 
 // POST route to handle logout action (from frontend)
-app.post('/logout', (req, res) => {
+app.post("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error("Error destroying session", err);
@@ -246,11 +254,10 @@ app.post('/logout', (req, res) => {
       return;
     }
 
-    res.clearCookie('connect.sid');
+    res.clearCookie("connect.sid");
     res.json({ message: "Logged out successfully." });
   });
 });
-
 
 app.listen(3001, () => {
   console.log("Server is running on port 3001");

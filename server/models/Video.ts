@@ -1,24 +1,26 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-// Ensure you export the interface
-export interface IVideo extends Document {
-  _id: mongoose.Types.ObjectId;
-  uploaderId: String;
+interface IVideo extends Document {
+  uploaderId: mongoose.Types.ObjectId;
   title: string;
+  description?: string;
   url: string;
   tags: string[];
   uploadedAt: Date;
+  views: number;
   votes: number;
   status: "active" | "deleted";
 }
 
 const VideoSchema: Schema<IVideo> = new Schema({
-  uploaderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  uploaderId: { type: Schema.Types.ObjectId, ref: "User", required: true }, // link to User who uploaded
   title: { type: String, required: true },
+  description: { type: String, default: "" },
   url: { type: String, required: true },
-  tags: { type: [String], default: [] },
+  tags: { type: [String], default: [] }, // list of tags (keywords)
   uploadedAt: { type: Date, default: Date.now },
-  votes: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },
+  votes: { type: Number, default: 0 }, // aggregate votes (e.g., total upvotes in battles)
   status: { type: String, enum: ["active", "deleted"], default: "active" },
 });
 
