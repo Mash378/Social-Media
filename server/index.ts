@@ -1,10 +1,19 @@
 import bcrypt from "bcrypt";
 import cors from "cors";
 import dotenv from "dotenv";
+import "dotenv/config";
 import express, { Express, Request, Response } from "express";
 import session from "express-session";
 import mongoose from "mongoose";
+import path from "path";
+import { isAuthenticated } from "./middleware/auth";
 import UserModel from "./models/User";
+import VideoModel from "./models/Video";
+import battleRouter from "./routes/battles";
+import profileRouter from "./routes/profile";
+import videosRouter from "./routes/videos";
+import votesRouter from "./routes/votes";
+
 const store = new session.MemoryStore();
 
 dotenv.config();
@@ -61,18 +70,6 @@ app.use(
     store: store,
   })
 );
-
-export const isAuthenticated = (
-  req: Request,
-  res: Response,
-  next: () => void
-) => {
-  if (req.session && req.session.user) {
-    next();
-  } else {
-    res.status(401).json({ error: "Not authenticated" });
-  }
-};
 
 app.get("/home", isAuthenticated, (req, res) => {
   res.send("Hello, " + req.session?.user?.username + "!");
@@ -177,4 +174,19 @@ app.post("/logout", (req, res) => {
 
 app.listen(3001, () => {
   console.log("Server is running on port 3001");
+});
+
+// serve uploaded files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/videos", isAuthenticated, videosRouter);
+app.use("/api/battles", isAuthenticated, battleRouter);
+app.use("/api/votes", isAuthenticated, votesRouter);
+app.use("/api/profile", profileRouter);
+
+app.get("/api/profile", isAuthenticated, async (req, res) => {
+  const user = req.session.user!;
+  const videos = await VideoModel.find({ uploaderId: user.id }).sort({
+    uploadedAt: -1,
+  });
+  res.json({ username: user.username, videos });
 });

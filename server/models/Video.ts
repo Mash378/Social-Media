@@ -9,7 +9,7 @@ interface IVideo extends Document {
   uploadedAt: Date;
   views: number;
   votes: number;
-  status: "active" | "deleted";
+  status: "active" | "battling" | "deleted";
 }
 
 const VideoSchema: Schema<IVideo> = new Schema({
@@ -21,7 +21,11 @@ const VideoSchema: Schema<IVideo> = new Schema({
   uploadedAt: { type: Date, default: Date.now },
   views: { type: Number, default: 0 },
   votes: { type: Number, default: 0 }, // aggregate votes (e.g., total upvotes in battles)
-  status: { type: String, enum: ["active", "deleted"], default: "active" },
+  status: {
+    type: String,
+    enum: ["active", "battling", "deleted"],
+    default: "active",
+  },
 });
 
 const VideoModel: Model<IVideo> = mongoose.model<IVideo>("Video", VideoSchema);

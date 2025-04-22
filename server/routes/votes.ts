@@ -1,6 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
-import { isAuthenticated } from "../index";
+import { isAuthenticated } from "../middleware/auth";
 import Battle from "../models/Battle";
 import Video from "../models/Video";
 import Vote from "../models/Vote";
@@ -26,7 +26,7 @@ votesRouter.post("/vote", isAuthenticated, async (req, res) => {
       return;
     }
     // (Assuming we stored user ID in session at login:)
-    const voterId = sessionUser.id;
+    const voterId = new mongoose.Types.ObjectId(sessionUser.id);
     // If user ID was not stored, we could look up by username/email:
     // const user = await UserModel.findOne({ username: sessionUser.username });
     // const voterId = user?._id;
@@ -69,7 +69,7 @@ votesRouter.post("/vote", isAuthenticated, async (req, res) => {
     // Check if this user already voted in the battle
     const existingVote = await Vote.findOne({ battleId, voterId });
     if (existingVote) {
-      res.status(400).json({ error: "You have already voted in this battle" });
+      res.status(206).json({ error: "You have already voted in this battle" });
       return;
     }
 
@@ -93,3 +93,5 @@ votesRouter.post("/vote", isAuthenticated, async (req, res) => {
     res.status(500).json({ error: "Failed to record vote" });
   }
 });
+
+export default votesRouter;

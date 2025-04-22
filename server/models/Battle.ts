@@ -11,6 +11,7 @@ interface IBattle extends Document {
   video2Votes: number;
   winner?: mongoose.Types.ObjectId; // the winning Video's ID (or undefined if tie or not concluded)
   concludedAt?: Date;
+  endsInMs: number; // milliseconds until the battle ends
 }
 
 const BattleSchema: Schema<IBattle> = new Schema({
@@ -30,6 +31,12 @@ const BattleSchema: Schema<IBattle> = new Schema({
   video2Votes: { type: Number, default: 0 },
   winner: { type: Schema.Types.ObjectId, ref: "Video" }, // set when battle concludes
   concludedAt: { type: Date },
+  endsInMs: {
+    type: Number,
+    default: function () {
+      return this.endsAt.getTime() - Date.now();
+    },
+  },
 });
 
 // TODO?: Ensure a combination of videos is unique per battle to avoid duplicate concurrent battles
