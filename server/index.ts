@@ -154,16 +154,15 @@ app.post("/signup", async (req: Request, res: Response) => {
 
 app.post("/pairVideos", isAuthenticated, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { audioId, tag } = req.body;
+    const { tag } = req.body;
 
-    if (!audioId || !tag) {
-      res.status(400).json({ error: "Audio ID and tag are required." });
+    if (!tag) {
+      res.status(400).json({ error: "Tag is required." });
       return;
     }
 
-    // Find videos that share the same audioId and have the same tag
+    // Find videos that have the same tag
     const videos = await VideoModel.find({
-      audioId,
       tags: tag,
       status: "active", // Ensure only active videos are considered
     }) as IVideo[];  // Assert the type of videos to be IVideo[]
